@@ -3,6 +3,7 @@ import cors from "cors";
 import bodyParser from "body-parser";
 import dotenv from "dotenv";
 import sql from "./db.js"; // ✅ db connection
+import authRoutes from "./routes/authRoutes.js"; // <-- import your login/signup routes
 
 dotenv.config();
 
@@ -11,6 +12,15 @@ const PORT = process.env.PORT || 4000;
 
 app.use(cors());
 app.use(bodyParser.json());
+
+// ✅ Health check route
+app.get("/health", (req, res) => {
+  res.send("Backend is running 🚀");
+});
+
+// ✅ Mount authentication routes
+app.use("/", authRoutes); 
+// Now POST /login and POST /signup will work
 
 // ✅ GET all messages
 app.get("/app", async (req, res) => {
@@ -90,4 +100,3 @@ app.listen(PORT, () => {
 app.get("/", (req, res) => {
   res.send("Backend is running ✅");
 });
-
