@@ -39,7 +39,7 @@ app.get("/health", (req, res) => {
 });
 
 // ✅ Auth routes (signup/login)
-app.use("/", authRoutes);
+app.use("/route", authRoutes);
 
 // ✅ Get all users
 app.get("/users", async (req, res) => {
