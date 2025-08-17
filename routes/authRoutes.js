@@ -19,7 +19,7 @@ route.post("/signup", async (req, res) => {
 
   try {
     const result = await sql`
-      INSERT INTO users (username, password)
+      INSERT INTO users2 (username, password)
       VALUES (${username}, ${password})
       RETURNING id, username
     `;
@@ -49,7 +49,7 @@ route.post("/login", async (req, res) => {
   try {
     const result = await sql`
       SELECT id, username 
-      FROM users 
+      FROM users2 
       WHERE username = ${username} AND password = ${password}
     `;
     if (result.length === 0) 
