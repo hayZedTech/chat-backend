@@ -59,7 +59,7 @@ app.get("/messages/general", async (req, res) => {
     const result = await sql`
       SELECT m.*, u.username AS sender_name
       FROM messages m
-      JOIN users2 u ON m.sender_id = u.id
+      JOIN users u ON m.sender_id = u.id
       WHERE m.recipient_id IS NULL
       ORDER BY created_at ASC
     `;
@@ -83,7 +83,7 @@ app.get("/messages/private/:otherUserId", async (req, res) => {
     const result = await sql`
       SELECT m.*, u.username AS sender_name
       FROM messages m
-      JOIN users2 u ON m.sender_id = u.id
+      JOIN users u ON m.sender_id = u.id
       WHERE (m.sender_id = ${currentUserId} AND m.recipient_id = ${otherUserId})
          OR (m.sender_id = ${otherUserId} AND m.recipient_id = ${currentUserId})
       ORDER BY created_at ASC
