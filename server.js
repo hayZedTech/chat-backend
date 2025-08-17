@@ -3,7 +3,7 @@ import cors from "cors";
 import bodyParser from "body-parser";
 import dotenv from "dotenv";
 import db from "./db.js"; // ✅ PostgreSQL connection (your db.js)
-import authRoutes from "./routes/authRoute.js"; // ✅ your login/signup routes
+import authRoutes from "./routes/authRoutes.js"; // ✅ your login/signup routes
 
 dotenv.config();
 
