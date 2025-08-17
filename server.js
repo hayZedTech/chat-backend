@@ -38,8 +38,8 @@ app.get("/health", (req, res) => {
   res.send("Backend is running 🚀");
 });
 
-// ✅ Auth routes
-app.use(authRoutes);
+// ✅ Auth routes (signup/login)
+app.use("/", authRoutes);
 
 // ✅ Get all users
 app.get("/users", async (req, res) => {
