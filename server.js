@@ -2,101 +2,193 @@ import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
 import dotenv from "dotenv";
-import sql from "./db.js"; // ✅ db connection
-import authRoutes from "./routes/authRoutes.js"; // <-- import your login/signup routes
+import db from "./db.js"; // ✅ PostgreSQL connection (your db.js)
+import authRoutes from "./routes/authRoute.js"; // ✅ your login/signup routes
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+// ✅ CORS setup for local + Render frontend
+const allowedOrigins = [
+  "http://localhost:5173",             // Vite dev server
+  "https://your-frontend.onrender.com" // 🔄 replace with your deployed frontend
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true); // allow Postman/curl
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = `CORS policy: No access from origin ${origin}`;
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
+
+app.options("*", cors()); // ✅ Handle preflight
+
 app.use(bodyParser.json());
 
-// ✅ Health check route
+// ✅ Health check
 app.get("/health", (req, res) => {
   res.send("Backend is running 🚀");
 });
 
-// ✅ Mount authentication routes
-app.use("/", authRoutes); 
-// Now POST /login and POST /signup will work
+// ✅ Auth routes
+app.use(authRoutes);
 
-// ✅ GET all messages
-app.get("/app", async (req, res) => {
-  const query = `
-    SELECT 
-      t.id, 
-      t.name, 
-      t.message, 
-      t.replyTo, 
-      TO_CHAR(t.created_at, 'YYYY-MM-DD HH24:MI:SS') AS created_at,
-      r.message AS replyMessage,
-      r.name AS replyUser
-    FROM tasks t
-    LEFT JOIN tasks r ON t.replyTo = r.id
-    ORDER BY t.created_at ASC
-  `;
+// ✅ Get all users
+app.get("/users", async (req, res) => {
   try {
-    const result = await sql.unsafe(query);
-    res.json(result);
-    console.log(result);
+    const result = await db`SELECT id, username FROM users2`;
+    res.status(200).json(result);
   } catch (err) {
-    console.error("❌ GET error:", err.message);
+    console.error("❌ Database error:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-// ✅ POST message
-app.post("/app", async (req, res) => {
-  const { user, msg, replyTo } = req.body;
+// ✅ General messages
+app.get("/messages/general", async (req, res) => {
   try {
-    const result = await sql`
-      INSERT INTO tasks (name, message, replyTo, created_at)
-      VALUES (${user}, ${msg}, ${replyTo || null}, NOW())
+    const result = await db`
+      SELECT m.*, u.username AS sender_name
+      FROM messages m
+      JOIN users2 u ON m.sender_id = u.id
+      WHERE m.recipient_id IS NULL
+      ORDER BY created_at ASC
+    `;
+    res.status(200).json(result);
+  } catch (err) {
+    console.error("❌ Database error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ Private messages
+app.get("/messages/private/:otherUserId", async (req, res) => {
+  const { otherUserId } = req.params;
+  const { currentUserId } = req.query;
+
+  if (!currentUserId) {
+    return res.status(400).json({ error: "currentUserId is required" });
+  }
+
+  try {
+    const result = await db`
+      SELECT m.*, u.username AS sender_name
+      FROM messages m
+      JOIN users2 u ON m.sender_id = u.id
+      WHERE (m.sender_id = ${currentUserId} AND m.recipient_id = ${otherUserId})
+         OR (m.sender_id = ${otherUserId} AND m.recipient_id = ${currentUserId})
+      ORDER BY created_at ASC
+    `;
+    res.status(200).json(result);
+  } catch (err) {
+    console.error("❌ Database error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ Post general message
+app.post("/messages/general", async (req, res) => {
+  const { sender_id, message, replyTo } = req.body;
+
+  if (!sender_id || !message) {
+    return res.status(400).json({ error: "Sender ID and message are required" });
+  }
+
+  try {
+    const result = await db`
+      INSERT INTO messages (sender_id, recipient_id, message, replyTo, created_at)
+      VALUES (${sender_id}, NULL, ${message}, ${replyTo || null}, NOW())
       RETURNING *
     `;
     res.status(201).json(result[0]);
   } catch (err) {
-    console.error("❌ POST error:", err.message);
+    console.error("❌ Database error:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-// ✅ EDIT message
-app.put("/app/:id", async (req, res) => {
-  const id = req.params.id;
-  const { msg } = req.body;
+// ✅ Post private message
+app.post("/messages/private", async (req, res) => {
+  const { sender_id, recipient_id, message, replyTo } = req.body;
+
+  if (!sender_id || !recipient_id || !message) {
+    return res.status(400).json({ error: "Sender ID, Recipient ID, and message are required" });
+  }
+
   try {
-    const result = await sql`
-      UPDATE tasks 
-      SET message = ${msg}
+    const result = await db`
+      INSERT INTO messages (sender_id, recipient_id, message, replyTo, created_at)
+      VALUES (${sender_id}, ${recipient_id}, ${message}, ${replyTo || null}, NOW())
+      RETURNING *
+    `;
+    res.status(201).json(result[0]);
+  } catch (err) {
+    console.error("❌ Database error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ Edit message
+app.put("/messages/:id", async (req, res) => {
+  const { id } = req.params;
+  const { message } = req.body;
+
+  if (!message) {
+    return res.status(400).json({ error: "Message is required" });
+  }
+
+  try {
+    const result = await db`
+      UPDATE messages SET message = ${message}
       WHERE id = ${id}
       RETURNING *
     `;
-    res.status(200).json(result[0]);
+    if (result.length === 0) {
+      return res.status(404).json({ error: "Message not found" });
+    }
+    res.json(result[0]);
   } catch (err) {
-    console.error("❌ PUT error:", err.message);
+    console.error("❌ Database error:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-// ✅ DELETE message
-app.delete("/app/:id", async (req, res) => {
-  const id = req.params.id;
+// ✅ Delete message
+app.delete("/messages/:id", async (req, res) => {
+  const { id } = req.params;
   try {
-    await sql`DELETE FROM tasks WHERE id = ${id}`;
-    res.json({ success: true });
+    const result = await db`DELETE FROM messages WHERE id = ${id} RETURNING *`;
+    if (result.length === 0) {
+      return res.status(404).json({ error: "Message not found" });
+    }
+    res.json({ message: "Message deleted successfully" });
   } catch (err) {
-    console.error("❌ DELETE error:", err.message);
+    console.error("❌ Database error:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+// ✅ Catch unhandled errors
+app.use((err, req, res, next) => {
+  console.error("Unhandled error:", err);
+  res.status(500).json({ error: "Internal server error" });
 });
 
-app.get("/", (req, res) => {
-  res.send("Backend is running ✅");
+// ✅ 404 fallback
+app.use((req, res) => {
+  console.log("Route not found:", req.method, req.path);
+  res.status(404).json({ error: "Route not found" });
+});
+
+// ✅ Start server
+app.listen(PORT, () => {
+  console.log(`🚀 Server listening on port: ${PORT}`);
 });
