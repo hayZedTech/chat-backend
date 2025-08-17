@@ -1,4 +1,4 @@
-const  express = require("express");
+const  express = "express";
 import cors from "cors";
 import bodyParser from "body-parser";
 import dotenv from "dotenv";
