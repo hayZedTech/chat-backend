@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
 import dotenv from "dotenv";
-import db from "./db.js"; // ✅ PostgreSQL connection (your db.js)
+import sql from "./db.js"; // ✅ PostgreSQL connection (your db.js)
 import authRoutes from "./routes/authRoutes.js"; // ✅ your login/signup routes
 
 dotenv.config();
@@ -44,7 +44,7 @@ app.use(authRoutes);
 // ✅ Get all users
 app.get("/users", async (req, res) => {
   try {
-    const result = await db`SELECT id, username FROM users2`;
+    const result = await sql`SELECT id, username FROM users2`;
     res.status(200).json(result);
   } catch (err) {
     console.error("❌ Database error:", err.message);
@@ -55,7 +55,7 @@ app.get("/users", async (req, res) => {
 // ✅ General messages
 app.get("/messages/general", async (req, res) => {
   try {
-    const result = await db`
+    const result = await sql`
       SELECT m.*, u.username AS sender_name
       FROM messages m
       JOIN users2 u ON m.sender_id = u.id
@@ -79,7 +79,7 @@ app.get("/messages/private/:otherUserId", async (req, res) => {
   }
 
   try {
-    const result = await db`
+    const result = await sql`
       SELECT m.*, u.username AS sender_name
       FROM messages m
       JOIN users2 u ON m.sender_id = u.id
@@ -103,7 +103,7 @@ app.post("/messages/general", async (req, res) => {
   }
 
   try {
-    const result = await db`
+    const result = await sql`
       INSERT INTO messages (sender_id, recipient_id, message, replyTo, created_at)
       VALUES (${sender_id}, NULL, ${message}, ${replyTo || null}, NOW())
       RETURNING *
@@ -124,7 +124,7 @@ app.post("/messages/private", async (req, res) => {
   }
 
   try {
-    const result = await db`
+    const result = await sql`
       INSERT INTO messages (sender_id, recipient_id, message, replyTo, created_at)
       VALUES (${sender_id}, ${recipient_id}, ${message}, ${replyTo || null}, NOW())
       RETURNING *
@@ -146,7 +146,7 @@ app.put("/messages/:id", async (req, res) => {
   }
 
   try {
-    const result = await db`
+    const result = await sql`
       UPDATE messages SET message = ${message}
       WHERE id = ${id}
       RETURNING *
@@ -165,7 +165,7 @@ app.put("/messages/:id", async (req, res) => {
 app.delete("/messages/:id", async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await db`DELETE FROM messages WHERE id = ${id} RETURNING *`;
+    const result = await sql`DELETE FROM messages WHERE id = ${id} RETURNING *`;
     if (result.length === 0) {
       return res.status(404).json({ error: "Message not found" });
     }
