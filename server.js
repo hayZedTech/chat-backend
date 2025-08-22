@@ -170,7 +170,7 @@ app.delete("/messages/:id", async (req, res) => {
     if (result.length === 0) {
       return res.status(404).json({ error: "Message not found" });
     }
-    res.json({ message: "Message deleted successfully" });
+    res.json({ message: "Message deleted successfully!" });
   } catch (err) {
     console.error("❌ Database error:", err.message);
     res.status(500).json({ error: err.message });
