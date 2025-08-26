@@ -201,6 +201,26 @@ app.use((req, res) => {
   res.status(404).json({ error: "Route not found" });
 });
 
+// // Debug: list all registered routes
+// const listRoutes = (app) => {
+//   app._router.stack.forEach((middleware) => {
+//     if (middleware.route) {
+//       // Routes registered directly on the app
+//       console.log("Route:", middleware.route.path);
+//     } else if (middleware.name === "router") {
+//       // Routes added via router.use()
+//       middleware.handle.stack.forEach((handler) => {
+//         if (handler.route) {
+//           console.log("Route:", handler.route.path);
+//         }
+//       });
+//     }
+//   });
+// };
+
+// listRoutes(app);
+
+
 // ✅ Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server listening on port: ${PORT}`);
