@@ -16,22 +16,22 @@ const allowedOrigins = [
   "https://chat-frontend-flame-six.vercel.app" // ✅ add this
 ];
 
-
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true); // allow Postman/curl
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = `CORS policy: No access from origin ${origin}`;
-      return callback(new Error(msg), false);
-    }
-    return callback(null, true);
-  },
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-}));
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true); // allow Postman/curl
+      if (allowedOrigins.indexOf(origin) === -1) {
+        const msg = `CORS policy: No access from origin ${origin}`;
+        return callback(new Error(msg), false);
+      }
+      return callback(null, true);
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 app.options("*", cors()); // ✅ Handle preflight
-
 app.use(bodyParser.json());
 
 // ✅ Health check
@@ -53,15 +53,21 @@ app.get("/users", async (req, res) => {
   }
 });
 
-// ✅ General messages
+// ✅ General messages (with reply info)
 app.get("/messages/general", async (req, res) => {
   try {
     const result = await sql`
-      SELECT m.*, u.username AS sender_name
+      SELECT 
+        m.*,
+        u.username AS sender_name,
+        parent.message AS reply_message,
+        parentUser.username AS reply_sender
       FROM messages m
       JOIN users2 u ON m.sender_id = u.id
+      LEFT JOIN messages parent ON m.replyTo = parent.id
+      LEFT JOIN users2 parentUser ON parent.sender_id = parentUser.id
       WHERE m.recipient_id IS NULL
-      ORDER BY created_at ASC
+      ORDER BY m.created_at ASC
     `;
     res.status(200).json(result);
   } catch (err) {
@@ -70,7 +76,7 @@ app.get("/messages/general", async (req, res) => {
   }
 });
 
-// ✅ Private messages
+// ✅ Private messages (with reply info)
 app.get("/messages/private/:otherUserId", async (req, res) => {
   const { otherUserId } = req.params;
   const { currentUserId } = req.query;
@@ -81,12 +87,18 @@ app.get("/messages/private/:otherUserId", async (req, res) => {
 
   try {
     const result = await sql`
-      SELECT m.*, u.username AS sender_name
+      SELECT 
+        m.*,
+        u.username AS sender_name,
+        parent.message AS reply_message,
+        parentUser.username AS reply_sender
       FROM messages m
       JOIN users2 u ON m.sender_id = u.id
+      LEFT JOIN messages parent ON m.replyTo = parent.id
+      LEFT JOIN users2 parentUser ON parent.sender_id = parentUser.id
       WHERE (m.sender_id = ${currentUserId} AND m.recipient_id = ${otherUserId})
          OR (m.sender_id = ${otherUserId} AND m.recipient_id = ${currentUserId})
-      ORDER BY created_at ASC
+      ORDER BY m.created_at ASC
     `;
     res.status(200).json(result);
   } catch (err) {
