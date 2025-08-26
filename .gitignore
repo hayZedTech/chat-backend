@@ -1,3 +1,4 @@
-node_modules
-.env
-backend/.env
+node_modules/   # ignores all node_modules folders
+.env            # ignores a root-level .env file
+.env.*          # ignores files like .env.local, .env.production, etc.
+backend/.env    # ignores .env inside the backend folder
