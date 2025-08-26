@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 4000;
 // ✅ CORS setup for local + Render frontend
 const allowedOrigins = [
   "http://localhost:5173",
-  "hhttps://chat-frontend-wslj.vercel.app" // ✅ add this
+  "https://chat-frontend-wslj.vercel.app" // ✅ add this
 ];
 
 app.use(
