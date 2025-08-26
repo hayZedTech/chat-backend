@@ -39,6 +39,11 @@ app.get("/health", (req, res) => {
   res.send("Backend is running 🚀");
 });
 
+app.get("/", (req, res) => {
+  res.send("Backend is running ✅");
+});
+
+
 // ✅ Auth routes (signup/login)
 app.use("/", authRoutes);
 
