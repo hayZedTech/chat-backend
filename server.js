@@ -174,7 +174,7 @@ app.put("/messages/:id", async (req, res) => {
   }
 });
 
-// ✅ Delete message
+//  Delete message
 app.delete("/messages/:id", async (req, res) => {
   const { id } = req.params;
   try {
