@@ -19,17 +19,24 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: function (origin, callback) {
-      if (!origin) return callback(null, true); // allow Postman/curl
-      if (allowedOrigins.indexOf(origin) === -1) {
-        const msg = `CORS policy: No access from origin ${origin}`;
-        return callback(new Error(msg), false);
+      if (!origin) return callback(null, true);
+
+      // ✅ Allow localhost + any vercel.app subdomain
+      if (
+        origin.includes("localhost:5173") ||
+        /\.vercel\.app$/.test(new URL(origin).hostname)
+      ) {
+        return callback(null, true);
       }
-      return callback(null, true);
+
+      const msg = `CORS policy: No access from origin ${origin}`;
+      return callback(new Error(msg), false);
     },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
 
 app.options("*", cors()); // ✅ Handle preflight
 app.use(bodyParser.json());
